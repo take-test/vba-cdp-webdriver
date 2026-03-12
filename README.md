@@ -15,3 +15,8 @@ Derived from:
 ## License
 This repository is published under the MIT License.
 See `LICENSE`.
+
+## 説明
+初のGithub使用のため、至らぬ点があるかと思います。ご了承ください。
+`Src` フォルダの中身をすべてExcelのVBEにインポートしてください。
+`Module` フォルダ内には、様々な関数の仕様例をサンプルとして載せています。
