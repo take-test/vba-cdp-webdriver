@@ -1,4 +1,3 @@
-Attribute VB_Name = "SampleModule"
 Option Explicit
 
 '========================================================
@@ -200,6 +199,21 @@ Public Sub RunAllSamples()
     currentProc = "Sample_37_Array2DToRange"
     Debug.Print "[START] " & currentProc
     Sample_37_Array2DToRange
+    Debug.Print "[OK] " & currentProc
+
+    currentProc = "Sample_38_QueryString_Basic"
+    Debug.Print "[START] " & currentProc
+    Sample_38_QueryString_Basic
+    Debug.Print "[OK] " & currentProc
+
+    currentProc = "Sample_39_Utility_PublicAPIs_Basic"
+    Debug.Print "[START] " & currentProc
+    Sample_39_Utility_PublicAPIs_Basic
+    Debug.Print "[OK] " & currentProc
+
+    currentProc = "Sample_40_Window_And_PasteShot_Basic"
+    Debug.Print "[START] " & currentProc
+    Sample_40_Window_And_PasteShot_Basic
     Debug.Print "[OK] " & currentProc
 
     Debug.Print "[DONE] RunAllSamples"
@@ -1950,4 +1964,107 @@ Public Sub Sample_37_Array2DToRange()
     Array2DToRange arr, ActiveSheet.Range("A1")
     
     Debug.Print "Array2DToRange wrote 3x3 to " & ActiveSheet.name & "!A1"
+End Sub
+'========================================================
+' 38. QueryString / GetValueFromQueryString
+' 何ができるか:
+' - 現在URLの QueryString を Dictionary として取得できる
+' - 指定キーの値を直接取得できる
+'
+' このサンプルの確認ポイント:
+' - QueryString に a / b が入ること
+' - GetValueFromQueryString で各値を取得できること
+'========================================================
+Public Sub Sample_38_QueryString_Basic()
+    Dim drv As IWebDriver
+    Set drv = NewDriver()
+    
+    ' QueryString 付きURLを開く
+    drv.OpenURL "https://example.com/?a=1&b=hello"
+    
+    ' QueryString 全体を取得する
+    Dim qs As Object
+    Set qs = drv.QueryString
+    
+    ' 個別キーを取得して確認する
+    Debug.Print "a = " & drv.GetValueFromQueryString("a")
+    Debug.Print "b = " & drv.GetValueFromQueryString("b")
+    
+    ' Dictionary 側の件数も確認する
+    Debug.Print "QueryString.Count = " & qs.count
+    
+    ' 現在URLの確認
+    Debug.Print "URL = " & drv.URL
+    
+    drv.CloseWindow
+End Sub
+
+'========================================================
+' 39. Utility Public APIs
+' 何ができるか:
+' - URL エンコード文字列を取得できる
+' - URL Safe なランダム文字列を生成できる
+' - SHA-256 を Base64URL 形式で取得できる
+' - 暗号学的乱数バイト列を取得できる
+'
+' このサンプルの確認ポイント:
+' - EncodeURIConpornent が空でないこと
+' - GetURLSafeRundomString が指定長で返ること
+' - GetBase64URLEncodedSHA256 が空でないこと
+' - GetSecureRandomNumber の配列長が指定値になること
+'========================================================
+Public Sub Sample_39_Utility_PublicAPIs_Basic()
+    Dim drv As IWebDriver
+    Set drv = NewDriver()
+    
+    ' URL エンコード結果を確認する
+    Debug.Print "EncodeURIConpornent = " & drv.EncodeURIConpornent("a b+c")
+    
+    ' URL Safe なランダム文字列を確認する
+    Debug.Print "GetURLSafeRundomString = " & drv.GetURLSafeRundomString(16)
+    
+    ' SHA-256 の Base64URL 結果を確認する
+    Debug.Print "SHA256(base64url) = " & drv.GetBase64URLEncodedSHA256("abc")
+    
+    ' 暗号学的乱数バイト列の長さを確認する
+    Dim v As Variant
+    v = drv.GetSecureRandomNumber(8)
+    Debug.Print "SecureRandom byte count = " & (UBound(v) - LBound(v) + 1)
+    
+    drv.CloseWindow
+End Sub
+
+'========================================================
+' 40. ShowWindow / ScreenShotPasteToSheet
+' 何ができるか:
+' - ブラウザウィンドウを最大化 / 通常表示へ切り替えできる
+' - スクリーンショットをシートへ貼り付けできる
+'
+' このサンプルの確認ポイント:
+' - ShowWindow(WindowSize.maximize) が動くこと
+' - ShowWindow(WindowSize.normal) が動くこと
+' - ScreenShotPasteToSheet が Shape を返すこと
+'========================================================
+Public Sub Sample_40_Window_And_PasteShot_Basic()
+    Dim drv As IWebDriver
+    Set drv = NewDriver()
+    
+    ' 表示確認用ページを開く
+    drv.OpenURL "https://example.com"
+    
+    ' 最大化してから通常表示へ戻す
+    drv.ShowWindow WindowSize.maximize
+    drv.SleepByWinAPI 1000
+    drv.ShowWindow WindowSize.normal
+    
+    ' アクティブシートへスクリーンショットを貼り付ける
+    Dim shp As Shape
+    Set shp = drv.ScreenShotPasteToSheet(10, 10, 0, 0, ActiveSheet.name, Image.png)
+    
+    ' 返却された Shape 情報を確認する
+    Debug.Print "Shape.Name = " & shp.name
+    Debug.Print "Shape.Width = " & shp.width
+    Debug.Print "Shape.Height = " & shp.height
+    
+    drv.CloseWindow
 End Sub
