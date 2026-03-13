@@ -5,11 +5,10 @@ Chromium ベースのブラウザを VBA から操作するための派生版プ
 
 
 ## Base project
-このプロジェクトは、以下を出発点とした派生版です。
+このプロジェクトは、以下のプロジェクトをベースとした機能強化版です。
+MITライセンスに基づき公開を行っております。
 
 - [24000/ChromeControler-No-Selenium-WebDriver-VBAJSON](https://github.com/24000/ChromeControler-No-Selenium-WebDriver-VBAJSON)
-
-元プロジェクトをベースにしつつ、今回の公開対象に合わせて構成整理と調整を行っています。
 
 ## Overview
 このリポジトリは、CDP を利用したブラウザ自動操作を VBA で扱うための派生版です。  
