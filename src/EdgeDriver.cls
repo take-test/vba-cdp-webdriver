@@ -78,39 +78,61 @@ Private downloadWatchCandidateStableCount_ As Long
 Private processId_ As Long
 'Private chromeHwnd_ As LongPtr
 Private Sub Class_Initialize()
- On Error GoTo EH
- 
- Dim userDataDir As String
- userDataDir = CreateObject("Shell.Application").Namespace("shell:Downloads").Self.path & "\\マクロ実行専用UserDataフォルダForEdge\\"
- 
- EnsureUserDataFolder userDataDir
- 
- processId_ = StartEdge(userDataDir)
- New_InnerObjects
- CDP_.SetDiscoverTargets
- CDP_.AttachToTarget basicInfo_.targetId
- CDP_.PageEnable
- CDP_.DOMEnable
- CDP_.RuntimeEnable
- CDP_.NetworkEnable
- CDP_.SetLifecycleEventsEnabled True
- WaitForActivation
- 
- Exit Sub
+    On Error GoTo EH
+
+    Dim attachExisting As Boolean
+    Dim userDataDir As String
+
+    attachExisting = g_AttachExistingBrowser_
+
+    If attachExisting Then
+        If IsRemoteDebugEndpointAvailable_() = False Then
+            Err.Raise vbObjectError + 2470, typeName(Me) & ".Class_Initialize", _
+                      "既存ブラウザの remote debugging endpoint (http://127.0.0.1:9222/json) に接続できません。"
+        End If
+
+        processId_ = 0
+    Else
+        userDataDir = CreateObject("Shell.Application").Namespace("shell:Downloads").Self.path & "\マクロ実行専用UserDataフォルダForEdge\"
+        EnsureUserDataFolder userDataDir
+        processId_ = StartEdge(userDataDir)
+    End If
+
+    New_InnerObjects
+    CDP_.SetDiscoverTargets
+    CDP_.AttachToTarget basicInfo_.targetId
+    CDP_.PageEnable
+    CDP_.DOMEnable
+    CDP_.RuntimeEnable
+    CDP_.NetworkEnable
+    CDP_.SetLifecycleEventsEnabled True
+
+    If attachExisting = False Then
+        WaitForActivation
+    End If
+
+    If attachExisting Then
+        If Len(g_AttachTargetTitle_) > 0 Then
+            AttachExistingTargetByTitle_ g_AttachTargetTitle_
+        End If
+    End If
+
+    Exit Sub
+
 EH:
- Dim errNum As Long
- Dim errSrc As String
- Dim errDesc As String
- 
- errNum = Err.Number
- errSrc = Err.source
- errDesc = Err.Description
- 
- On Error Resume Next
- CloseInternalSession
- On Error GoTo 0
- 
- Err.Raise errNum, errSrc, errDesc
+    Dim errNum As Long
+    Dim errSrc As String
+    Dim errDesc As String
+
+    errNum = Err.Number
+    errSrc = Err.source
+    errDesc = Err.Description
+
+    On Error Resume Next
+    CloseInternalSession
+    On Error GoTo 0
+
+    Err.Raise errNum, errSrc, errDesc
 End Sub
 
 ' Edge をリモートデバッグ有効で起動する
@@ -124,7 +146,7 @@ Private Function StartEdge(userDataDir As String) As Long
     With CreateObject("WScript.Shell")
         edgeExePath = """" & .RegRead(EDGE_EXE_REG_KEY) & """"
         Set objExec = .Exec( _
-                            edgeExePath & DEBUG_MODE_OPTION & " --disable-popup-blocking --no-first-run --disable-fre" _
+                            edgeExePath & DEBUG_MODE_OPTION & " --disable-popup-blocking --no-first-run --disable-fre --disable-sync" _
                             & USER_DATA_DIR_OPTION & "" & userDataDir & "")
         StartEdge = objExec.ProcessId
         Set objExec = Nothing
@@ -248,6 +270,44 @@ Private Sub ReconnectToTarget(ByVal targetId As String)
     basicInfo_.DocumentObjectId = CDP_.GetDocumentObjectID
     basicInfo_.DocumentNodeId = CDP_.GetDocumentNodeID
 End Sub
+Private Function IsRemoteDebugEndpointAvailable_() As Boolean
+    Dim client As Object
+
+    On Error GoTo quit
+    Set client = CreateObject("MSXML2.ServerXMLHTTP")
+
+    client.Open "GET", "http://127.0.0.1:9222/json", False
+    client.setRequestHeader "Content-Type", "application/json"
+    client.send
+
+    If client.status = 200 Then
+        IsRemoteDebugEndpointAvailable_ = True
+    End If
+    Exit Function
+
+quit:
+    IsRemoteDebugEndpointAvailable_ = False
+End Function
+
+Private Sub AttachExistingTargetByTitle_(ByVal tabTitle As String)
+    Dim tabs As Collection
+    Dim i As Long
+    Dim targetId As String
+
+    Set tabs = GetPageTabs()
+
+    For i = 1 To tabs.count
+        If CStr(tabs(i)("title")) = tabTitle Then
+            targetId = CStr(tabs(i)("targetId"))
+            ReconnectToTarget targetId
+            Exit Sub
+        End If
+    Next i
+
+    Err.Raise vbObjectError + 2471, typeName(Me) & ".AttachExistingTargetByTitle_", _
+              "指定タイトルのタブが見つかりません: " & tabTitle
+End Sub
+
 Private Function FindCompletedDownloadedFilePath_() As String
     Dim f As String
     Dim fullPath As String
