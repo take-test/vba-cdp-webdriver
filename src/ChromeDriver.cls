@@ -378,6 +378,7 @@ Private Function GetPageTabs() As Collection
             Set tempDic = CreateObject("Scripting.Dictionary")
             tempDic.Add "title", json_.GetValue(jsObjStr, "title")
             tempDic.Add "targetId", json_.GetValue(jsObjStr, "id")
+            tempDic.Add "url", json_.GetValue(jsObjStr, "url")
             tempDic.Add "webSocketDebuggerUrl", json_.GetValue(jsObjStr, "webSocketDebuggerUrl")
             tmpCollection.Add tempDic
         End If
@@ -396,11 +397,14 @@ End Function
 ' Public
 ' 現在のページ URL を返す
 Private Property Get IWebDriver_URL() As String
-    CDP_.SetDiscoverTargets  'これを使ってPage情報最新化
+    Dim tabs As Collection
     Dim i As Long
-    For i = 1 To events_.PageInfos.count
-        If events_.PageInfos(i)("targetId") = basicInfo_.targetId Then
-            IWebDriver_URL = events_.PageInfos(i)("url")
+
+    Set tabs = GetPageTabs()
+
+    For i = 1 To tabs.count
+        If CStr(tabs(i)("targetId")) = basicInfo_.targetId Then
+            IWebDriver_URL = CStr(tabs(i)("url"))
             Exit Property
         End If
     Next
@@ -1081,6 +1085,7 @@ Private Function IWebDriver_DownloadWatchWaitCompleted(maxWaitTime_sec As Long) 
     Dim candidatePath As String
     Dim fileName As String
     Dim sizeNow As Double
+    Dim fileNameLower As String
 
     startT = Timer
 
@@ -1104,7 +1109,6 @@ Private Function IWebDriver_DownloadWatchWaitCompleted(maxWaitTime_sec As Long) 
                 End If
 
                 downloadWatchCandidateLastSize_ = sizeNow
-
                 fileName = FileNameFromPathLocal_(candidatePath)
 
                 ' 最終ファイルが2回連続で同サイズなら完了
@@ -1114,8 +1118,11 @@ Private Function IWebDriver_DownloadWatchWaitCompleted(maxWaitTime_sec As Long) 
                         events_.DownloadInfoDic("FilePath") = candidatePath
                         events_.DownloadInfoDic("SuggestedFilename") = fileName
 
-                        If Not downloadWatchKnownFiles_.Exists(LCase$(fileName)) Then
-                            downloadWatchKnownFiles_.Add LCase$(fileName), True
+                        fileNameLower = LCase$(fileName)
+                        If downloadWatchKnownFiles_.Exists(fileNameLower) Then
+                            downloadWatchKnownFiles_(fileNameLower) = CDbl(FileDateTime(candidatePath))
+                        Else
+                            downloadWatchKnownFiles_.Add fileNameLower, CDbl(FileDateTime(candidatePath))
                         End If
 
                         IWebDriver_DownloadWatchWaitCompleted = True
@@ -1130,9 +1137,7 @@ Private Function IWebDriver_DownloadWatchWaitCompleted(maxWaitTime_sec As Long) 
         DoEvents
         Helper_.SleepByWinAPI 200
     Loop
-End Function
-
-' 提案ファイル名を返す
+End Function ' 提案ファイル名を返す
 Private Function IWebDriver_DownloadWatchSuggestedFilename() As String
     Dim s As String
 
@@ -2557,7 +2562,6 @@ Private Function FileNameFromPathLocal_(ByVal fullPath As String) As String
         FileNameFromPathLocal_ = fullPath
     End If
 End Function
-
 Private Function ResolveCurrentDownloadCandidatePath_() As String
     Dim f As String
     Dim fullPath As String
@@ -2567,17 +2571,27 @@ Private Function ResolveCurrentDownloadCandidatePath_() As String
     Dim bestTempPath As String
     Dim bestTempTime As Date
     Dim normalizedFinalPath As String
+    Dim currentStamp As Double
+    Dim snapshotStamp As Double
+    Dim isChanged As Boolean
 
     f = Dir$(downloadWatchDir_ & "\*.*", vbNormal Or vbHidden Or vbReadOnly Or vbSystem)
     Do While Len(f) > 0
         fileNameLower = LCase$(f)
         fullPath = downloadWatchDir_ & "\" & f
+        currentStamp = CDbl(FileDateTime(fullPath))
 
-        If Not downloadWatchKnownFiles_.Exists(fileNameLower) Then
+        If downloadWatchKnownFiles_.Exists(fileNameLower) Then
+            snapshotStamp = CDbl(downloadWatchKnownFiles_(fileNameLower))
+            isChanged = (currentStamp > snapshotStamp)
+        Else
+            isChanged = True
+        End If
+
+        If isChanged Then
             If IsTempDownloadFileName_(fileNameLower) Then
                 normalizedFinalPath = downloadWatchDir_ & "\" & NormalizeDownloadedFileName_(f)
 
-                ' temp に対応する最終ファイルが既に出ていれば最終ファイルを優先
                 If Len(Dir$(normalizedFinalPath, vbNormal Or vbHidden Or vbReadOnly Or vbSystem)) > 0 Then
                     ResolveCurrentDownloadCandidatePath_ = normalizedFinalPath
                     Exit Function
@@ -2628,12 +2642,18 @@ Private Function IsTempDownloadFileName_(ByVal fileNameLower As String) As Boole
 End Function
 Private Sub SnapshotDownloadDir_(ByRef dic As Object, ByVal folderPath As String)
     Dim f As String
+    Dim fullPath As String
+    Dim fileNameLower As String
 
     f = Dir$(folderPath & "\*.*", vbNormal Or vbHidden Or vbReadOnly Or vbSystem)
     Do While Len(f) > 0
-        If Not dic.Exists(LCase$(f)) Then
-            dic.Add LCase$(f), True
+        fullPath = folderPath & "\" & f
+        fileNameLower = LCase$(f)
+
+        If Not dic.Exists(fileNameLower) Then
+            dic.Add fileNameLower, CDbl(FileDateTime(fullPath))
         End If
+
         f = Dir$
     Loop
 End Sub

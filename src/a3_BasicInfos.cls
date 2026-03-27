@@ -48,23 +48,34 @@ End Property
 ' 現在のターゲット情報を初期化する
 Public Sub Init(json As a2_JSONHandler)
     TargetInfoJSON = GetTargetInfoJSON
-    
+
     Dim i As Long
-    For i = 0 To json.GetJsonLength(TargetInfoJSON)
-        If json.GetValue(TargetInfoJSON, i, "type") = "page" _
-        And (json.GetValue(TargetInfoJSON, i, "url") Like "*://newtab/" _
-          Or json.GetValue(TargetInfoJSON, i, "url") Like "*://new-tab-page/" _
-          Or json.GetValue(TargetInfoJSON, i, "url") Like "http://*" _
-          Or json.GetValue(TargetInfoJSON, i, "url") Like "https://*") Then
+    Dim candidateUrl As String
+
+    For i = 0 To json.GetJsonLength(TargetInfoJSON) - 1
+        If json.GetValue(TargetInfoJSON, i, "type") = "page" Then
+            candidateUrl = json.GetValue(TargetInfoJSON, i, "url")
+
+            If candidateUrl Like "*://newtab/" _
+            Or candidateUrl Like "*://new-tab-page/" _
+            Or candidateUrl Like "http://*" _
+            Or candidateUrl Like "https://*" Then
+
                 webSocketURL = json.GetValue(TargetInfoJSON, i, KEY_WEBSOCKETURL)
+                targetId = json.GetValue(TargetInfoJSON, i, "id")
                 Exit For
+            End If
         End If
     Next
-    
-    targetId = json.GetValue(TargetInfoJSON, 0, "id")
+
+    If webSocketURL = "" Or targetId = "" Then
+        Err.Raise vbObjectError + 2202, "a3_BasicInfos.Init", _
+            "有効な page ターゲットの取得に失敗しました。"
+    End If
+
     PageDefaultTargetId = targetId
     webSocketURLPath = Replace(webSocketURL, _
-    WEBSOCKET_SCHEMA & HOST_ & ":" & DEBUGGING_PORT, "")
+        WEBSOCKET_SCHEMA & HOST_ & ":" & DEBUGGING_PORT, "")
     Context = Replace(webSocketURLPath, targetId, "")
 End Sub
 
