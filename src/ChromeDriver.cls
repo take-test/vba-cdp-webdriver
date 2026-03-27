@@ -1,4 +1,4 @@
-VERSION 1.0 CLASS
+﻿VERSION 1.0 CLASS
 BEGIN
   MultiUse = -1  'True
 END
@@ -1487,7 +1487,7 @@ Private Function IWebDriver_WaitForResponse(urlContains As String, timeoutSec As
 
     Do
         'イベント受信を進める（DownloadWatchWaitCompleted と同じ考え方）
-        CDP_.ExecuteJavaScript "0;"  ' ←イベントをevents_へ流す 
+        CDP_.ExecuteJavaScript "0;"  ' ←イベントをevents_へ流す
 
         Dim i As Long
         For i = events_.NetworkResponses.count To 1 Step -1
