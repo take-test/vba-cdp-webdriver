@@ -148,28 +148,6 @@ Public Function FileNameFromFullPath(ByVal fullPath As String) As String
     End If
 End Function
 
-' 要素コレクションから行数相当を返す
-Function GetElemRow(elems As IWebElements) As Long
-Dim elem As IWebElement
-Dim cnt As Long
-cnt = 0
-For Each elem In elems
-    cnt = cnt + 1
-Next
-GetElemRow = cnt / 8
-End Function
-
-' 要素コレクション件数を返す
-Function GetElemCount(elems As IWebElements) As Long
-    Dim elem As IWebElement
-    Dim cnt As Long
-    cnt = 0
-    For Each elem In elems
-        cnt = cnt + 1
-    Next
-    GetElemCount = cnt
-End Function
-
 ' 末尾 1 文字を除いた文字列を返す
 Function RemoveRightMostChar(ByVal s As String) As String
     If Len(s) > 0 Then
